@@ -1,0 +1,40 @@
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${WORDPRESS_DB_NAME}
+      MYSQL_USER: ${WORDPRESS_DB_USER}
+      MYSQL_PASSWORD: ${WORDPRESS_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${WORDPRESS_DB_ROOT_PASSWORD}
+    volumes:
+      - ./data/db:/var/lib/mysql
+    networks:
+      - traefik
+      - wordpress
+
+  wp:
+    image: wordpress:php8.2-apache
+    restart: unless-stopped
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME}
+      WORDPRESS_DB_USER: ${WORDPRESS_DB_USER}
+      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.wp.rule=Host(`${WORDPRESS_SITE}`)"
+      - "traefik.http.routers.wp.entrypoints=websecure"
+      - "traefik.http.routers.wp.tls.certresolver=letsencrypt"
+      - "traefik.http.services.wp.loadbalancer.server.port=80"
+    volumes:
+      - ./data/wp:/var/www/html
+    networks:
+      - traefik
+      - wordpress
+
+networks:
+  traefik:
+    external: true
+  wordpress:
+    internal: true
