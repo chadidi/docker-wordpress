@@ -1,6 +1,6 @@
 services:
   db:
-    image: mysql:8.0
+    image: mariadb:11.3
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: ${WORDPRESS_DB_NAME}
@@ -9,6 +9,8 @@ services:
       MYSQL_ROOT_PASSWORD: ${WORDPRESS_DB_ROOT_PASSWORD}
     volumes:
       - ./data/db:/var/lib/mysql
+    ports:
+      - '${FORWARD_DB_PORT:-3307}:3306'
     networks:
       - traefik
       - wordpress
@@ -16,8 +18,10 @@ services:
   wp:
     image: wordpress:php8.2-apache
     restart: unless-stopped
+    depends_on:
+      - db
     environment:
-      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_HOST: db
       WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME}
       WORDPRESS_DB_USER: ${WORDPRESS_DB_USER}
       WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD}
@@ -29,6 +33,7 @@ services:
       - "traefik.http.services.wp.loadbalancer.server.port=80"
     volumes:
       - ./data/wp:/var/www/html
+      - ./wordpress.ini:/usr/local/etc/php/conf.d/wordpress.ini
     networks:
       - traefik
       - wordpress
